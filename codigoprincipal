@@ -1,0 +1,259 @@
+from tkinter import Entry, Label, Frame, Tk, Button,ttk, Scrollbar, VERTICAL, HORIZONTAL,StringVar,END
+from prueba_conexion import*
+from tkinter import messagebox
+import re
+
+class Registro(Frame):
+    def __init__(self, master, *args, **kwargs):
+        super().__init__(master, *args, **kwargs)
+
+        self.Nombre = StringVar()  # Mover la creación de las variables StringVar() al principio
+        self.Precio = StringVar()
+        self.Cantidad = StringVar()
+        self.Categoria_Nombre = StringVar()
+        self.Fecha_vencimiento = StringVar()
+        self.Ubicacion_Nombre = StringVar()
+        self.buscar = StringVar()
+
+        self.frame1 = Frame(master)
+        self.frame1.grid(columnspan=2, column=0, row=0)
+        self.frame2 = Frame(master, bg='gray22')
+        self.frame2.grid(column=0, row=1)
+        self.frame3 = Frame(master)
+        self.frame3.grid(rowspan=2, column=1, row=1)
+        self.frame4 = Frame(master, bg='gray22')
+        self.frame4.grid(column=0, row=2)
+
+        self.Fecha_vencimiento_entry = Entry(self.frame2, textvariable=self.Fecha_vencimiento, font=('Arial', 12), state='normal')
+        self.Fecha_vencimiento_entry.grid(column=1, row=5)
+
+        self.base_datos = Registro_datos()
+        self.create_wietgs()
+
+    def create_wietgs(self):
+        self.ubicacion_panel_control = StringVar()
+        Label(self.frame1, text = 'R E G I S T R O \t D E \t D A T O S',bg='gray22',fg='lavender', font=('Orbitron',15,'bold')).grid(column=1, row=0)
+
+        Label(self.frame2, text = 'Agregar Nuevos Datos',fg='lavender', bg ='gray22', font=('Rockwell',12,'bold')).grid(columnspan=2, column=0,row=0, pady=5)
+        Label(self.frame2, text='Nombre', fg='lavender', bg='gray22', font=('Rockwell', 13, 'bold')).grid(column=0, row=1, pady=15)
+        Label(self.frame2, text = 'Precio',fg='lavender', bg ='gray22', font=('Rockwell',13,'bold')).grid(column=0,row=2, pady=15)
+        Label(self.frame2, text = 'Cantidad',fg='lavender', bg ='gray22', font=('Rockwell',13,'bold')).grid(column=0,row=3, pady=15)
+        Label(self.frame2, text = 'Categoria', fg='lavender',bg ='gray22', font=('Rockwell',13,'bold')).grid(column=0,row=4, pady=15)
+        Label(self.frame2, text = 'Fecha de vencimiento', fg='lavender',bg ='gray22', font=('Rockwell',13,'bold')).grid(column=0,row=5, pady=15)
+        Label(self.frame2, text = 'Ubicacion',fg='lavender', bg ='gray22', font=('Rockwell',13,'bold')).grid(column=0,row=6, pady=15)
+
+        Entry(self.frame2,textvariable=self.Nombre , font=('Arial',12)).grid(column=1,row=1, padx =5)
+        Entry(self.frame2,textvariable=self.Precio , font=('Arial',12)).grid(column=1,row=2)
+        Entry(self.frame2,textvariable=self.Cantidad , font=('Arial',12)).grid(column=1,row=3)
+        self.categoria_combobox = ttk.Combobox(self.frame2, textvariable=self.Categoria_Nombre, values=["Perecedero", "No perecedero"], font=('Arial', 12), state='readonly')
+        self.categoria_combobox.grid(column=1, row=4)
+        self.categoria_combobox.bind("<<ComboboxSelected>>", self.verificar_categoria)  # Vincula la función al evento
+        Entry(self.frame2, textvariable=self.Fecha_vencimiento, font=('Arial', 12), state='normal').grid(column=1, row=5)
+        Entry(self.frame2,textvariable=self.Fecha_vencimiento , font=('Arial',12)).grid(column=1,row=5)
+        Entry(self.frame2,textvariable=self.Ubicacion_Nombre , font=('Arial',12)).grid(column=1,row=6)
+
+        Label(self.frame4, text = 'Panel de Control',fg='white', bg ='gray22', font=('Rockwell',12,'bold')).grid(columnspan=3, column=0,row=0, pady=1, padx=4)         
+        Button(self.frame4,command= self.agregar_datos, text='REGISTRAR', font=('Arial',10,'bold'), bg='cyan4').grid(column=0,row=1, pady=10, padx=4)
+        Button(self.frame4,command = self.limpiar_datos, text='LIMPIAR', font=('Arial',10,'bold'), bg='Indianred4').grid(column=1,row=1, padx=10)        
+        Button(self.frame4,command = self.eliminar_fila, text='ELIMINAR', font=('Arial',10,'bold'), bg='mediumpurple4').grid(column=2,row=1, padx=4)
+        Button(self.frame4,command = self.buscar_nombre, text='BUSCAR POR NOMBRE', font=('Arial',8,'bold'), bg='goldenrod4').grid(columnspan=2,column = 1, row=2)
+        Entry(self.frame4,textvariable=self.buscar , font=('Arial',12), width=18).grid(column=0,row=2, pady=1, padx=8)
+        Button(self.frame4,command = self.mostrar_todo, text='MOSTRAR DATOS', font=('Arial',10,'bold'), bg='forest green').grid(columnspan=3,column=0,row=3, pady=8)
+        # Dentro del método create_wietgs en la clase Registro
+
+        Label(self.frame4, text='Agregar Ubicación', fg='white', bg='gray22', font=('Rockwell', 12, 'bold')).grid(columnspan=3, column=0, row=4, pady=5)
+        Entry(self.frame4, textvariable=self.ubicacion_panel_control, font=('Arial', 12)).grid(column=0, row=5, padx=5)
+        Button(self.frame4, command=self.agregar_ubicacion_panel_control, text='AGREGAR', font=('Arial', 10, 'bold'), bg='cyan4').grid(column=1, row=5, pady=5)
+
+
+        self.tabla = ttk.Treeview(self.frame3, height=21)
+        self.tabla.grid(column=0, row=0)
+
+        ladox = Scrollbar(self.frame3, orient = HORIZONTAL, command= self.tabla.xview)
+        ladox.grid(column=0, row = 1, sticky='ew') 
+        ladoy = Scrollbar(self.frame3, orient =VERTICAL, command = self.tabla.yview)
+        ladoy.grid(column = 1, row = 0, sticky='ns')
+
+        self.tabla.configure(xscrollcommand = ladox.set, yscrollcommand = ladoy.set)
+
+        self.tabla['columns'] = ('ID','Nombre', 'Precio', 'Cantidad','Categoria','Fecha_vencimiento', 'Ubicacion')
+
+        self.tabla.column('#0', minwidth=0, width=0, anchor='center')
+        self.tabla.column('ID', minwidth=100, width=120, anchor='center')
+        self.tabla.column('Nombre', minwidth=100, width=120, anchor='center')
+        self.tabla.column('Precio', minwidth=100, width=130 , anchor='center')
+        self.tabla.column('Cantidad', minwidth=100, width=120, anchor='center' )
+        self.tabla.column('Categoria', minwidth=100, width=120 , anchor='center')
+        self.tabla.column('Fecha_vencimiento', minwidth=100, width=130, anchor='center')
+        self.tabla.column('Ubicacion', minwidth=100, width=105, anchor='center')
+
+        self.tabla.heading('#0', text='', anchor ='center')
+        self.tabla.heading('ID', text='ID', anchor ='center')
+        self.tabla.heading('Nombre', text='Nombre', anchor ='center')
+        self.tabla.heading('Precio', text='Precio', anchor ='center')
+        self.tabla.heading('Cantidad', text='Cantidad', anchor ='center')
+        self.tabla.heading('Categoria', text='Categoria', anchor ='center')
+        self.tabla.heading('Fecha_vencimiento', text='Fecha de vencimiento', anchor ='center')
+        self.tabla.heading('Ubicacion', text='Ubicacion', anchor ='center')
+        
+
+        estilo = ttk.Style(self.frame3)
+        estilo.theme_use('alt') #  ('clam', 'alt', 'default', 'classic')
+        estilo.configure(".",font= ('Helvetica', 12, 'bold'), foreground='red2')        
+        estilo.configure("Treeview", font= ('Helvetica', 10, 'bold'), foreground='black',  background='white')
+        estilo.map('Treeview',background=[('selected', 'green2')], foreground=[('selected','black')] )
+
+        self.tabla.bind("<<TreeviewSelect>>", self.obtener_fila)  # seleccionar  fila
+
+    def agregar_ubicacion(self):
+        ubicacion = self.Ubicacion_Nombre.get()
+        if ubicacion:
+            self.base_datos.inserta_ubicacion(ubicacion)
+            messagebox.showinfo("Éxito", "Ubicación agregada correctamente.")
+        else:
+            messagebox.showwarning("Advertencia", "Por favor, ingresa una ubicación válida.")
+
+    def agregar_datos(self):
+        Nombre = self.Nombre.get()
+        Precio = self.Precio.get()
+        Cantidad = self.Cantidad.get()
+        Categoria_Nombre = self.Categoria_Nombre.get()
+        Fecha_vencimiento = self.Fecha_vencimiento.get()
+        Ubicacion_Nombre = self.Ubicacion_Nombre.get()
+
+        if not (Nombre and Precio and Cantidad and Categoria_Nombre):
+            messagebox.showerror("Error", "Por favor, complete las casillas.")
+            return
+
+        if Categoria_Nombre == "Perecedero":
+            if not self.validar_fecha(Fecha_vencimiento):
+                messagebox.showerror("Error", "Por favor, ingresa la fecha de vencimiento en el formato YYYY-MM-DD.")
+                return
+        else:
+            Fecha_vencimiento = ""  # Deja la fecha de vencimiento en blanco para productos no perecederos
+        
+        if not self.validar_float(Precio):
+            messagebox.showerror("Error", "Por favor, ingresa un valor numérico válido para el precio.")
+            return
+
+        if not self.validar_entero(Cantidad):
+            messagebox.showerror("Error", "Por favor, ingresa un número entero válido para la cantidad.")
+            return
+        self.base_datos.inserta_producto(Nombre, Precio, Cantidad, Fecha_vencimiento, Categoria_Nombre, Ubicacion_Nombre)
+
+        # Obtener el IDsuministro del último registro insertado
+        cur = self.base_datos.prueba_conexion.cursor()
+        cur.execute("SELECT LAST_INSERT_ID()")
+        IDsuministro = cur.fetchone()[0]
+        cur.close()
+
+        # Insertar en la tabla de la interfaz gráfica solo si se obtuvo un valor para IDsuministro
+        if IDsuministro is not None:
+            fecha_vencimiento_mostrar = Fecha_vencimiento if Categoria_Nombre == "Perecedero" else ""  # Mostrar cadena vacía en lugar de la fecha si es "No perecedero"
+            self.tabla.insert('', 'end', text=IDsuministro, values=(IDsuministro, Nombre, Precio, Cantidad, Categoria_Nombre, fecha_vencimiento_mostrar, Ubicacion_Nombre))
+
+
+    def verificar_categoria(self, event):
+        selected_category = self.categoria_combobox.get()
+        if selected_category == "No perecedero":
+            self.Fecha_vencimiento.set("")  # Borra el contenido de la entrada de Fecha de vencimiento
+            self.Fecha_vencimiento_entry.configure(state='disabled')  # Deshabilita la entrada
+        else:
+            self.Fecha_vencimiento_entry.configure(state='normal')  # Habilita la entrada
+
+    def validar_fecha(self, fecha):
+        # Patrón regex para validar el formato de fecha YYYY-MM-DD
+        patron_fecha = r'^\d{4}-\d{2}-\d{2}$'
+        if re.match(patron_fecha, fecha):
+            return True
+        else:
+            return False
+
+    def limpiar_datos(self):
+        self.tabla.delete(*self.tabla.get_children())
+        self.Nombre.set('')
+        self.Precio.set('')
+        self.Cantidad.set('')
+        self.Categoria_Nombre.set('')
+        self.Fecha_vencimiento.set('')
+        self.Ubicacion_Nombre.set('')
+
+    def validar_entero(self, numero):
+        try:
+            int(numero)
+            return True
+        except ValueError:
+            return False
+
+    def validar_float(self, numero):
+        try:
+            float(numero)
+            return True
+        except ValueError:
+            return False
+
+    def buscar_nombre(self):
+        nombre_producto = self.buscar.get()
+        nombre_producto = str("'" + nombre_producto + "'")
+        nombre_buscado = self.base_datos.busca_producto(nombre_producto)
+        self.tabla.delete(*self.tabla.get_children())
+        for dato in nombre_buscado:
+            fecha_vencimiento_mostrar = dato[5] if dato[5] is not None else ""  # Mostrar cadena vacía en lugar de None
+            self.tabla.insert('', 'end', text=dato[0], values=(dato[0], dato[1], dato[2], dato[3], dato[4], fecha_vencimiento_mostrar, dato[6]))
+
+    def agregar_ubicacion_panel_control(self):
+        ubicacion = self.ubicacion_panel_control.get()
+        if ubicacion:
+            if self.base_datos.busca_ubicacion(ubicacion):
+                messagebox.showinfo("Advertencia", "La ubicación ya está agregada en la base de datos.")
+            else:
+                self.base_datos.inserta_ubicacion(ubicacion)
+                messagebox.showinfo("Éxito", "Ubicación agregada correctamente.")
+        else:
+            messagebox.showwarning("Advertencia", "Por favor, ingresa una ubicación válida.")
+
+
+    def mostrar_todo(self):
+        self.tabla.delete(*self.tabla.get_children())
+        registro = self.base_datos.mostrar_productos()
+        for dato in registro:
+            fecha_vencimiento_mostrar = dato[5] if dato[5] is not None else ""  # Mostrar cadena vacía en lugar de None
+            self.tabla.insert('', 'end', text=dato[0], values=(dato[0], dato[1], dato[2], dato[3], dato[4], fecha_vencimiento_mostrar, dato[6]))
+
+
+    def eliminar_fila(self):
+        fila = self.tabla.selection()
+        if len(fila) !=0:
+            self.tabla.delete(fila)
+            nombre = str(self.nombre_borrar)
+            self.base_datos.elimina_productos(int(nombre))
+
+
+
+    def obtener_fila(self, event):
+        current_item = self.tabla.focus()
+        if not current_item:
+            return
+        data = self.tabla.item(current_item)
+        self.nombre_borrar = data['values'][0]  # Almacena el valor del IDsuministro, que está en la posición 0
+
+
+    def verificar_categoria(self, event):
+        selected_category = self.categoria_combobox.get()
+        if selected_category == "No perecedero":
+            self.Fecha_vencimiento.set("")  # Borra el contenido de la entrada de Fecha de vencimiento
+            self.Fecha_vencimiento_entry.configure(state='disabled')  # Deshabilita la entrada
+        else:
+            self.Fecha_vencimiento_entry.configure(state='normal')  # Habilita la entrada
+
+def main():
+    ventana = Tk()
+    ventana.wm_title("Registro de Datos en MySQL")
+    ventana.config(bg='gray22')
+    ventana.geometry('1270x650')
+    ventana.resizable(0,0)
+    app = Registro(ventana)
+    app.mainloop()
+
+if __name__=="__main__":
+    main()        
